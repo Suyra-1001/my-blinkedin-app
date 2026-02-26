@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkEdIn Secure Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --bg: #0f172a; --card: rgba(30, 41, 59, 0.7); --accent: #3b82f6; }
+        body { background: linear-gradient(135deg, #020617 0%, #0f172a 100%); color: white; height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .chat-header { background: var(--card); backdrop-filter: blur(10px); padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .message { padding: 12px 16px; border-radius: 20px; max-width: 80%; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .sent { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .received { background: #334155; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-img { max-width: 250px; border-radius: 12px; cursor: pointer; border: 2px solid rgba(255,255,255,0.1); }
+        audio { height: 35px; width: 220px; filter: hue-rotate(180deg) brightness(1.5); }
+        .input-area { background: var(--card); backdrop-filter: blur(15px); padding: 15px; display: flex; align-items: center; gap: 12px; }
+        .input-area input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 25px; padding: 10px 20px; flex: 1; outline: none; }
+        .btn-icon { color: white; font-size: 1.2rem; background: none; border: none; transition: 0.3s; }
+        .btn-icon:hover { transform: scale(1.1); color: var(--accent); }
+        .recording { color: #ef4444 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="chat-header d-flex align-items-center">
+        <a href="javascript:history.back()" class="text-white me-3"><i class="fa fa-chevron-left"></i></a>
+        <div>
+            <h6 class="mb-0">Secure Chat: Order #{{ order.id }}</h6>
+            <small class="text-info">End-to-End Encrypted</small>
+        </div>
+    </div>
+
+    <div class="chat-window" id="chatWin">
+        {% for m in history %}
+        <div class="message {% if m.sender_id == session.user_id %}sent{% else %}received{% endif %}">
+            <small class="d-block opacity-50 mb-1" style="font-size: 0.7rem;">{{ m.sender_name }}</small>
+            {% if m.msg_type == 'text' %}
+                {{ m.content }}
+            {% elif m.msg_type == 'photo' %}
+                <img src="{{ m.file_path }}" class="chat-img" onclick="window.open(this.src)">
+            {% elif m.msg_type == 'audio' %}
+                <audio controls src="{{ m.file_path }}"></audio>
+            {% endif %}
+            <div class="text-end mt-1" style="font-size: 0.6rem; opacity: 0.5;">{{ m.timestamp.strftime('%H:%M') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="input-area">
+        <button class="btn-icon" onclick="document.getElementById('fileIn').click()"><i class="fa fa-plus-circle"></i></button>
+        <input type="text" id="mIn" placeholder="Type your message..." onkeypress="if(event.key==='Enter') send()">
+        <button class="btn-icon" id="vBtn"><i class="fa fa-microphone"></i></button>
+        <button class="btn-icon" onclick="send()"><i class="fa fa-paper-plane"></i></button>
+    </div>
+
+    <input type="file" id="fileIn" hidden accept="image/*" onchange="upload('photo')">
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io(); const oId = "{{ order.id }}";
+        socket.emit('join', {order_id: oId});
+
+        function send() {
+            const i = document.getElementById('mIn');
+            if(i.value) { socket.emit('send_msg', {order_id: oId, msg: i.value}); i.value=''; }
+        }
+
+        async function upload(type, blob = null) {
+            const fd = new FormData();
+            const f = blob || document.getElementById('fileIn').files[0];
+            if(!f) return;
+            fd.append('file', f, type === 'audio' ? 'rec.webm' : 'img.jpg');
+            fd.append('order_id', oId); fd.append('type', type);
+            await fetch('/upload-media', { method: 'POST', body: fd });
+        }
+
+        let rec; let chunks = [];
+        const vBtn = document.getElementById('vBtn');
+        vBtn.onmousedown = async () => {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+                rec = new MediaRecorder(s);
+                rec.ondataavailable = e => chunks.push(e.data);
+                rec.onstop = () => { upload('audio', new Blob(chunks, { type: 'audio/webm' })); chunks = []; };
+                rec.start(); vBtn.classList.add('recording');
+            } catch(e) { alert("Microphone access denied"); }
+        };
+        vBtn.onmouseup = () => { if(rec) { rec.stop(); vBtn.classList.remove('recording'); } };
+
+        socket.on('new_msg', () => { location.reload(); });
+        window.onload = () => { const w = document.getElementById('chatWin'); w.scrollTop = w.scrollHeight; };
+    </script>
+</body>
+</html>
