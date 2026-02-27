@@ -21,9 +21,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-with app.app_context():
-    db.create_all()
-    print("Database Tables Created Successfully!")
 # --- 90+ PROFESSIONS ---
 PROFESSIONS = sorted(["Electrician", "Plumber", "AC Repair", "Home Cleaner", "Carpenter", "Painter", "Pest Control", "Appliance Repair", "Gardener", "Yoga Trainer", "Math Tutor", "Physics Tutor", "Guitar Teacher", "Makeup Artist", "Hair Stylist", "Massage for Men", "Car Washer", "Mechanic", "Pet Groomer", "Dog Walker", "Delivery Partner", "Bike Taxi", "Packers & Movers", "Chef at Home", "Tailor", "Dry Cleaning", "Interior Designer", "Event Planner", "Security Guard", "Physiotherapist", "Laptop Repair", "Mobile Repair", "Roofer", "Locksmith", "CCTV Installer", "Solar Panel Tech", "Tattoo Artist", "Dance Teacher", "Zumba Instructor", "Nutritionist", "Web Developer", "App Developer", "SEO Expert", "Graphic Designer", "Video Editor", "Chartered Accountant", "Lawyer", "Astrologer", "Pandit Ji", "Vaastu Consultant", "Car Driver", "Baby Sitter", "Elderly Care", "Nurse at Home", "Wall Paper Expert", "Chimney Repair", "RO Service", "Microwave Repair", "Inverter Repair", "Mason (Mistry)", "Tile Layer", "False Ceiling Expert", "Aluminium Work", "Welder", "Glass Cutter", "Event Decorator", "DJ for Party", "Bouncer", "Bodyguard", "Private Tutor", "Foreign Language Teacher", "IELTS Trainer", "Piano Teacher", "Drum Instructor", "Social Media Manager", "Tax Consultant", "Notary Service", "VFX Artist", "UI/UX Designer", "Network Engineer", "Data Recovery Expert", "Key Maker"])
 
@@ -251,6 +248,7 @@ def handle_msg(data):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    socketio.run(app, debug=True)
+    socketio.run(app, host='0.0.0.0',port=10000)
+
 
 
